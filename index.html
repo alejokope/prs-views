@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR Dashboard</title>
+  <style>
+    body { font-family: sans-serif; background: #f3f4f6; padding: 2rem; }
+    .container { max-width: 800px; margin: auto; }
+    .card { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .btn { background: #2563eb; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
+    .input { padding: 0.5rem; width: 100%; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Pull Requests Dashboard</h1>
+    <div id="auth">
+      <p>Pegá tu token de GitHub (scope: <code>repo</code>):</p>
+      <input type="password" id="tokenInput" class="input" placeholder="Token de GitHub">
+      <button class="btn" onclick="saveToken()">Guardar token</button>
+    </div>
+
+    <div id="loading" style="display:none;">Cargando PRs...</div>
+    <div id="prContainer" class="grid"></div>
+  </div>
+
+  <script>
+    const repoList = [
+      'mi-org/frontend-app',
+      'mi-org/backend-api'
+    ];
+
+    const tokenInput = document.getElementById('tokenInput');
+    const prContainer = document.getElementById('prContainer');
+    const loading = document.getElementById('loading');
+
+    const headers = () => {
+      const token = localStorage.getItem('gh_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    async function fetchPRs() {
+      const token = localStorage.getItem('gh_token');
+      if (!token) return;
+
+      loading.style.display = 'block';
+      prContainer.innerHTML = '';
+
+      for (const repo of repoList) {
+        const res = await fetch(`https://api.github.com/repos/${repo}/pulls?state=open`, { headers });
+        const data = await res.json();
+        data.forEach(pr => {
+          const card = document.createElement('a');
+          card.href = pr.html_url;
+          card.target = '_blank';
+          card.className = 'card';
+          card.innerHTML = `
+            <h2>${pr.title}</h2>
+            <p><strong>Repo:</strong> ${repo}</p>
+            <p><strong>Autor:</strong> ${pr.user.login}</p>
+            <p style="color:#d97706">⏳ En revisión</p>
+          `;
+          prContainer.appendChild(card);
+        });
+      }
+      loading.style.display = 'none';
+    }
+
+    function saveToken() {
+      const token = tokenInput.value;
+      localStorage.setItem('gh_token', token);
+      fetchPRs();
+    }
+
+    // Si ya hay token guardado, cargar PRs
+    if (localStorage.getItem('gh_token')) {
+      document.getElementById('auth').style.display = 'none';
+      fetchPRs();
+    }
+  </script>
+</body>
+</html>
